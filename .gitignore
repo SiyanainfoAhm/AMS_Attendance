@@ -1,0 +1,43 @@
+# Node / web
+node_modules/
+dist/
+.vite/
+.turbo/
+.parcel-cache/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+coverage/
+*.iml
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Local DB dumps (see scripts/backup-ams.ps1)
+backups/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+

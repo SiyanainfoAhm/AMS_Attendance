@@ -1,0 +1,11 @@
+{
+  "name": "ams-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:admin": "npm --prefix apps/admin-web run dev",
+    "build:admin": "npm --prefix apps/admin-web run build",
+    "lint:admin": "npm --prefix apps/admin-web run lint",
+    "typecheck:admin": "npm --prefix apps/admin-web run typecheck"
+  }
+}
+

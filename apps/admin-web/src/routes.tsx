@@ -13,6 +13,7 @@ import { ReportsPage } from "./ui/pages/ReportsPage";
 import { DailyAttendanceReportPage } from "./ui/pages/DailyAttendanceReportPage";
 import { AuditPage } from "./ui/pages/AuditPage";
 import { SupportPage } from "./ui/pages/SupportPage";
+import { ProfilePage } from "./ui/pages/ProfilePage";
 
 export const router = createBrowserRouter([
   { path: "/", element: <DashboardPage /> },
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
   { path: "/audit", element: <AuditPage /> },
   { path: "/reports", element: <ReportsPage /> },
   { path: "/reports/daily-attendance", element: <DailyAttendanceReportPage /> },
-  { path: "/support", element: <SupportPage /> }
+  { path: "/support", element: <SupportPage /> },
+  { path: "/profile", element: <ProfilePage /> }
 ]);
 

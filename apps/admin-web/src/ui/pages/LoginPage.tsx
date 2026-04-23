@@ -1,10 +1,12 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 
 export function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const passwordChanged = useMemo(() => params.get("passwordChanged") === "1", [params]);
   const [email, setEmail] = useState("admin@demo.local");
   const [password, setPassword] = useState("ChangeMe@123");
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,11 @@ export function LoginPage() {
           >
             Sign in
           </button>
+          {passwordChanged && (
+            <div className="alert alert-success" style={{ margin: 0 }}>
+              Your password was updated. Please sign in again with your new password.
+            </div>
+          )}
           {error && <div className="alert alert-error">{error}</div>}
         </div>
       </div>

@@ -106,6 +106,21 @@ export async function amsLogout(accessToken: string) {
   return json.result as any;
 }
 
+export async function amsChangePassword(accessToken: string, oldPassword: string, newPassword: string) {
+  const res = await fetch(`${getAmsFunctionsBaseUrl()}/auth-change-password`, {
+    method: "POST",
+    headers: {
+      ...getSupabaseGatewayHeaders(),
+      "content-type": "application/json",
+      "x-ams-access-token": accessToken
+    },
+    body: JSON.stringify({ oldPassword, newPassword })
+  });
+  const json = await readJson(res);
+  handleAmsJsonResponse(res, json);
+  return json.result as any;
+}
+
 /** Always succeeds with { requested: true } if email format ok; optional reset_token in dev. */
 export async function amsRequestPasswordReset(email: string) {
   const res = await fetch(`${getAmsFunctionsBaseUrl()}/auth-password-reset-request`, {

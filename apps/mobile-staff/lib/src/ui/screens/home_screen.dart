@@ -579,7 +579,7 @@ class _DashboardBodyState extends State<_DashboardBody> with WidgetsBindingObser
     final auth = widget.auth;
     final trimmed = auth.userDisplayName?.trim() ?? "";
     final name = trimmed.isEmpty ? "Staff" : trimmed;
-    final company = auth.companyId ?? "—";
+    final company = (auth.companyName ?? "").trim().isNotEmpty ? auth.companyName!.trim() : (auth.companyId ?? "—");
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),

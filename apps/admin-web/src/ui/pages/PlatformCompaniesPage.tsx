@@ -19,7 +19,7 @@ export function PlatformCompaniesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
-  const [newTz, setNewTz] = useState("Asia/Kolkata");
+  const [newTz] = useState("Asia/Kolkata");
 
   const pageCount = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
@@ -181,10 +181,6 @@ export function PlatformCompaniesPage() {
               <div className="field">
                 <label className="field-label">Name</label>
                 <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Acme Pvt Ltd" />
-              </div>
-              <div className="field">
-                <label className="field-label">Timezone</label>
-                <input className="input" value={newTz} onChange={(e) => setNewTz(e.target.value)} placeholder="Asia/Kolkata" />
               </div>
               <button
                 type="button"

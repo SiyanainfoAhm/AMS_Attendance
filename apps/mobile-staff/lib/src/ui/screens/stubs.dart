@@ -5,6 +5,7 @@ import "package:firebase_messaging/firebase_messaging.dart";
 
 import "../../api/ams_api.dart";
 import "../../auth/auth_controller.dart";
+import "../../../main.dart";
 import "../design/ams_tokens.dart";
 import "../widgets/ams_widgets.dart";
 import "support_screen.dart";
@@ -490,6 +491,158 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
+class ChangePasswordScreen extends StatefulWidget {
+  const ChangePasswordScreen({super.key});
+
+  @override
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+}
+
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+  final _api = AmsApi();
+  final _old = TextEditingController();
+  final _new = TextEditingController();
+  final _confirm = TextEditingController();
+  String? _error;
+  bool _submitting = false;
+  bool _obscureOld = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+
+  @override
+  void dispose() {
+    _old.dispose();
+    _new.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final auth = context.read<AuthController>();
+    await auth.ensureReady();
+    final at = auth.accessToken;
+    if (at == null || at.isEmpty) {
+      setState(() => _error = "Session expired. Sign in again.");
+      return;
+    }
+
+    final oldPw = _old.text;
+    final newPw = _new.text;
+    final confirm = _confirm.text;
+
+    setState(() => _error = null);
+
+    if (newPw.length < 8) {
+      setState(() => _error = "New password must be at least 8 characters.");
+      return;
+    }
+    if (newPw != confirm) {
+      setState(() => _error = "New password and confirmation do not match.");
+      return;
+    }
+    if (oldPw == newPw) {
+      setState(() => _error = "New password must be different from your current password.");
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await _api.changePassword(accessToken: at, oldPassword: oldPw, newPassword: newPw);
+      if (!mounted) return;
+      await auth.logout();
+      appMessengerKey.currentState?.showSnackBar(
+        const SnackBar(content: Text("Password updated. Please sign in again.")),
+      );
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        final nav = Navigator.of(context);
+        if (nav.canPop()) nav.pop();
+      });
+    } on AmsApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = "$e");
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AmsScaffold(
+      title: "Change password",
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        children: [
+          AmsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  "For security, changing your password signs you out everywhere and ends active sessions.",
+                  style: TextStyle(color: AmsTokens.muted),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _old,
+                  obscureText: _obscureOld,
+                  autofillHints: const [AutofillHints.password],
+                  decoration: InputDecoration(
+                    labelText: "Current password",
+                    errorText: _error,
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(() => _obscureOld = !_obscureOld),
+                      icon: Icon(_obscureOld ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _new,
+                  obscureText: _obscureNew,
+                  autofillHints: const [AutofillHints.newPassword],
+                  decoration: InputDecoration(
+                    labelText: "New password",
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                      icon: Icon(_obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _confirm,
+                  obscureText: _obscureConfirm,
+                  autofillHints: const [AutofillHints.newPassword],
+                  decoration: InputDecoration(
+                    labelText: "Confirm new password",
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                      icon: Icon(_obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AmsPrimaryButton(
+                  label: _submitting ? "Updating…" : "Update password",
+                  icon: Icons.lock_reset_outlined,
+                  onPressed: _submitting ? null : _submit,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProfileScreenState extends State<ProfileScreen> {
   final _api = AmsApi();
   String _lastPunch = "—";
@@ -767,8 +920,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final trimmedName = auth.userDisplayName?.trim() ?? "";
     final name = trimmedName.isEmpty ? "Staff" : trimmedName;
     final email = auth.userEmail ?? "—";
-    final company = auth.companyId ?? "—";
-    final staffId = auth.mappedStaffId ?? "—";
+    final companyLabel = (auth.companyName ?? "").trim().isNotEmpty ? auth.companyName!.trim() : (auth.companyId ?? "—");
 
     return AmsScaffold(
       title: "Profile",
@@ -813,9 +965,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _kv("Company", company),
-                const Divider(height: 22, color: AmsTokens.border),
-                _kv("Mapped staff ID", staffId),
+                _kv("Company", companyLabel),
               ],
             ),
           ),
@@ -858,6 +1008,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: const Text("Updates and reminders"),
                   onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                  },
+                ),
+                const Divider(height: 1, color: AmsTokens.border),
+                ListTile(
+                  leading: const Icon(Icons.lock_reset_outlined, color: AmsTokens.brand),
+                  title: const Text("Change password"),
+                  subtitle: const Text("Update your sign-in password"),
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
                   },
                 ),
                 const Divider(height: 1, color: AmsTokens.border),

@@ -47,14 +47,22 @@ class AmsLoginResult {
 class AmsMeResult {
   final String userId;
   final String? companyId;
+  final String? companyName;
+  final String? companyCode;
   final String? mappedStaffId;
+  final String? mappedStaffName;
+  final String? mappedStaffCode;
   final List<String> permissions;
   final bool isPlatformSuperAdmin;
 
   AmsMeResult({
     required this.userId,
     required this.companyId,
+    required this.companyName,
+    required this.companyCode,
     required this.mappedStaffId,
+    required this.mappedStaffName,
+    required this.mappedStaffCode,
     required this.permissions,
     required this.isPlatformSuperAdmin,
   });
@@ -300,6 +308,18 @@ String _amsUserFacingError(Map<String, dynamic> json) {
     return "You don’t have permission for this action.";
   }
 
+  if (errStr == "invalid_old_password" || detStr.toLowerCase().contains("invalid_old_password")) {
+    return "Current password is incorrect.";
+  }
+
+  if (errStr == "new_password_must_differ") {
+    return "New password must be different from your current password.";
+  }
+
+  if (errStr == "password_too_short" || detStr.toLowerCase().contains("password_too_short")) {
+    return "Password must be at least 8 characters.";
+  }
+
   if (details != null) return "$details";
   if (err != null) return "$err";
   return "request_failed";
@@ -311,8 +331,18 @@ void _throwIfNotOk(http.Response res, dynamic json) {
     throw AmsApiException(_amsUserFacingError(json), status: res.statusCode);
   }
   final body = res.body.trim();
+
+  // Common when an Edge Function wasn't deployed (Supabase often returns an empty body or HTML).
+  if (res.statusCode == 404) {
+    throw AmsApiException(
+      "Change password is not available right now. Please update the app or contact your admin.",
+      status: res.statusCode,
+    );
+  }
+
+  // Preserve raw body snippet if present; otherwise include HTTP code for debugging.
   final snippet = body.isEmpty ? null : (body.length > 300 ? body.substring(0, 300) : body);
-  throw AmsApiException(snippet ?? "request_failed", status: res.statusCode);
+  throw AmsApiException(snippet ?? "request_failed (HTTP ${res.statusCode})", status: res.statusCode);
 }
 
 class AmsApi {
@@ -362,6 +392,25 @@ class AmsApi {
     _throwIfNotOk(res, json);
   }
 
+  Future<void> changePassword({
+    required String accessToken,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final res = await http.post(
+      _fn("auth-change-password"),
+      headers: {..._gatewayHeaders(), "content-type": "application/json", "x-ams-access-token": accessToken},
+      body: jsonEncode({"oldPassword": oldPassword, "newPassword": newPassword}),
+    );
+    final json = _readJson(res);
+    // Helpful diagnostics in debug builds / flutter run logs.
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      // ignore: avoid_print
+      print("AMS changePassword failed: HTTP ${res.statusCode} body=${res.body.trim()}");
+    }
+    _throwIfNotOk(res, json);
+  }
+
   Future<AmsMeResult> me({required String accessToken}) async {
     final res = await http.get(
       _fn("me"),
@@ -375,10 +424,51 @@ class AmsApi {
     final platformRaw = userJson?["is_platform_super_admin"];
     final isPlatform = platformRaw == true || platformRaw == "true";
     final permissions = (result["permissions"] as List<dynamic>? ?? []).map((x) => "$x").toList();
+
+    final companyId = session["company_id"] == null ? null : "${session["company_id"]}";
+    String? companyName;
+    String? companyCode;
+    final selectedCompany = result["selectedCompany"];
+    if (selectedCompany is Map<String, dynamic>) {
+      final n = selectedCompany["name"];
+      final c = selectedCompany["code"];
+      companyName = n == null ? null : "$n";
+      companyCode = c == null ? null : "$c";
+    } else {
+      final companies = result["companies"];
+      if (companies is List) {
+        for (final it in companies) {
+          if (it is! Map) continue;
+          final id = it["company_id"] ?? it["id"];
+          if (id != null && "$id" == (companyId ?? "")) {
+            final n = it["company_name"] ?? it["name"];
+            final c = it["company_code"] ?? it["code"];
+            companyName = n == null ? null : "$n";
+            companyCode = c == null ? null : "$c";
+            break;
+          }
+        }
+      }
+    }
+
+    final mappedStaffId = result["mappedStaffId"] == null ? null : "${result["mappedStaffId"]}";
+    String? mappedStaffName;
+    String? mappedStaffCode;
+    final mappedStaff = result["mappedStaff"];
+    if (mappedStaff is Map<String, dynamic>) {
+      final n = mappedStaff["fullName"] ?? mappedStaff["full_name"];
+      final c = mappedStaff["staffCode"] ?? mappedStaff["staff_code"];
+      mappedStaffName = n == null ? null : "$n";
+      mappedStaffCode = c == null ? null : "$c";
+    }
     return AmsMeResult(
       userId: "${session["user_id"]}",
-      companyId: session["company_id"] == null ? null : "${session["company_id"]}",
-      mappedStaffId: result["mappedStaffId"] == null ? null : "${result["mappedStaffId"]}",
+      companyId: companyId,
+      companyName: companyName,
+      companyCode: companyCode,
+      mappedStaffId: mappedStaffId,
+      mappedStaffName: mappedStaffName,
+      mappedStaffCode: mappedStaffCode,
       permissions: permissions,
       isPlatformSuperAdmin: isPlatform,
     );

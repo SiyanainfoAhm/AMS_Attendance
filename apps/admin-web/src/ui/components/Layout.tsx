@@ -8,6 +8,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const perms: string[] = state.me?.permissions ?? [];
   const isPlatform = state.me?.user?.is_platform_super_admin === true;
 
+  const companyId = state.companyId;
+  const selectedCompanyName =
+    state.me?.selectedCompany?.name ??
+    (Array.isArray(state.me?.companies)
+      ? state.me.companies.find((c: any) => String(c?.id ?? c?.company_id ?? "") === String(companyId ?? ""))?.name ??
+        state.me.companies.find((c: any) => String(c?.id ?? c?.company_id ?? "") === String(companyId ?? ""))?.company_name
+      : null);
+  const companyLabel = selectedCompanyName ? String(selectedCompanyName) : (companyId ?? "");
+
   const navItems = [
     { to: "/", label: "Dashboard", show: true },
     { to: "/platform/companies", label: "Companies", show: isPlatform || perms.includes("PLATFORM_COMPANY_READ") },
@@ -17,7 +26,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { to: "/attendance", label: "Attendance", show: isPlatform || perms.includes("COMPANY_ATTENDANCE_READ") },
     { to: "/audit", label: "Audit", show: isPlatform || perms.includes("COMPANY_ATTENDANCE_READ") },
     { to: "/reports", label: "Reports", show: isPlatform || perms.includes("COMPANY_REPORT_READ") },
-    { to: "/support", label: "Support", show: isPlatform || perms.includes("COMPANY_SUPPORT_READ") }
+    { to: "/support", label: "Support", show: isPlatform || perms.includes("COMPANY_SUPPORT_READ") },
+    { to: "/profile", label: "Profile", show: true }
   ].filter((x) => x.show);
 
   return (
@@ -31,9 +41,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="ams-header-actions">
-          {state.companyId && (
-            <span className="ams-company-pill" title={state.companyId}>
-              Company: {state.companyId}
+          {companyId && (
+            <span className="ams-company-pill" title={companyId}>
+              Company: {companyLabel}
             </span>
           )}
           <button

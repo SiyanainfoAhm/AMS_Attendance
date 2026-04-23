@@ -60,6 +60,15 @@ export function DashboardPage() {
   const [productivity, setProductivity] = useState<ProductivityRow[]>([]);
   const [stations, setStations] = useState<StationRow[]>([]);
 
+  const companyId = state.companyId;
+  const selectedCompanyName =
+    state.me?.selectedCompany?.name ??
+    (Array.isArray(state.me?.companies)
+      ? state.me.companies.find((c: any) => String(c?.id ?? c?.company_id ?? "") === String(companyId ?? ""))?.name ??
+        state.me.companies.find((c: any) => String(c?.id ?? c?.company_id ?? "") === String(companyId ?? ""))?.company_name
+      : null);
+  const companyLabel = selectedCompanyName ? String(selectedCompanyName) : (companyId ?? "");
+
   useEffect(() => {
     (async () => {
       if (!state.accessToken) {
@@ -173,10 +182,10 @@ export function DashboardPage() {
             <h1 className="dash-hero-title">Dashboard</h1>
             <p className="dash-hero-subtitle">
               Signed in as <strong>{displayName}</strong>
-              {state.companyId && (
+              {companyId && (
                 <>
                   {" "}
-                  · company <code>{state.companyId}</code>
+                  · company <code>{companyLabel}</code>
                 </>
               )}
             </p>

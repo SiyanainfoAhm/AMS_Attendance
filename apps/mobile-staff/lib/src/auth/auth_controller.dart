@@ -18,7 +18,9 @@ class AuthController extends ChangeNotifier {
   String? accessToken;
   String? refreshToken;
   String? companyId;
+  String? companyName;
   String? mappedStaffId;
+  String? mappedStaffName;
 
   List<AmsCompanySummary> companies = [];
   String? userDisplayName;
@@ -58,7 +60,9 @@ class AuthController extends ChangeNotifier {
         } catch (_) {
           // If selection fails, force company re-select.
           companyId = null;
+          companyName = null;
           mappedStaffId = null;
+          mappedStaffName = null;
           stage = AuthStage.needsCompany;
           notifyListeners();
           return;
@@ -74,7 +78,9 @@ class AuthController extends ChangeNotifier {
       accessToken = null;
       refreshToken = null;
       companyId = null;
+      companyName = null;
       mappedStaffId = null;
+      mappedStaffName = null;
       stage = AuthStage.loggedOut;
     }
 
@@ -87,6 +93,8 @@ class AuthController extends ChangeNotifier {
         final me = await _api.me(accessToken: accessToken);
         // If server says company not selected, we are not ready.
         if (me.companyId == null || me.companyId!.isEmpty) return null;
+        companyName = me.companyName;
+        mappedStaffName = me.mappedStaffName;
         return me.mappedStaffId;
       } catch (_) {
         if (attempt == 0) {
@@ -169,7 +177,9 @@ class AuthController extends ChangeNotifier {
     accessToken = null;
     refreshToken = null;
     companyId = null;
+    companyName = null;
     mappedStaffId = null;
+    mappedStaffName = null;
     companies = [];
     stage = AuthStage.loggedOut;
     notifyListeners();

@@ -38,6 +38,10 @@ Deno.serve(async (req) => {
   });
 
   const companyId = session.company_id;
+  const selectedCompany =
+    companyId && Array.isArray(companies)
+      ? (companies as any[]).find((c) => String(c?.company_id ?? c?.id ?? "") === String(companyId)) ?? null
+      : null;
   const rbac =
     companyId && typeof companyId === "string"
       ? await Promise.all([
@@ -53,6 +57,7 @@ Deno.serve(async (req) => {
   const permissions = rbac ? (rbac[1].data?.map((r: any) => r.permission_code) ?? []) : [];
 
   let mappedStaffId: string | null = null;
+  let mappedStaff: any | null = null;
   if (companyId && typeof companyId === "string") {
     const { data: mapRow } = await svc.client
       .from("ams_user_staff_map")
@@ -62,11 +67,43 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .maybeSingle();
     mappedStaffId = (mapRow as { ams_staff_id?: string } | null)?.ams_staff_id ?? null;
+
+    if (mappedStaffId) {
+      const { data: staffRow } = await svc.client
+        .from("ams_staff")
+        .select("id, staff_code, full_name, is_active")
+        .eq("id", mappedStaffId)
+        .eq("ams_company_id", companyId)
+        .maybeSingle();
+      if (staffRow) {
+        mappedStaff = {
+          id: staffRow.id,
+          staffCode: (staffRow as any).staff_code ?? null,
+          fullName: (staffRow as any).full_name ?? null,
+          isActive: (staffRow as any).is_active ?? null
+        };
+      }
+    }
   }
 
   return jsonResponse({
     ok: true,
-    result: { user, session, companies: companies ?? [], roles, permissions, mappedStaffId }
+    result: {
+      user,
+      session,
+      companies: companies ?? [],
+      selectedCompany: selectedCompany
+        ? {
+            id: String((selectedCompany as any).company_id ?? (selectedCompany as any).id ?? ""),
+            code: (selectedCompany as any).company_code ?? (selectedCompany as any).code ?? null,
+            name: (selectedCompany as any).company_name ?? (selectedCompany as any).name ?? null
+          }
+        : null,
+      roles,
+      permissions,
+      mappedStaffId,
+      mappedStaff
+    }
   });
 });
 
